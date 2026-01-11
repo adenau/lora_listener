@@ -39,17 +39,40 @@ A Python-based listener application for receiving and logging messages from a **
 
 ## Configuration
 
-By default, the application uses the following settings:
+All application settings are centralized in `config.py`. Edit this file to customize your setup:
 
-- **Serial Port**: `/dev/ttyUSB0`
-- **Baud Rate**: `9600`
-- **Database File**: `messages.db`
-- **API Server**: `http://0.0.0.0:5000`
+```python
+# Serial Port Configuration
+SERIAL_PORT = "/dev/ttyUSB0"      # Your LoRa device serial port
+SERIAL_BAUDRATE = 9600             # Communication baud rate
 
-To change these settings, edit the respective files:
-- LoRa settings: `lora.py`
-- Database file: `database.py`
-- API settings: `api.py`
+# Database Configuration
+DATABASE_FILE = "messages.db"      # SQLite database file path
+
+# API Server Configuration
+API_HOST = "0.0.0.0"              # Server host (0.0.0.0 = all interfaces)
+API_PORT = 5000                    # Server port
+
+# Dashboard Configuration
+DASHBOARD_REFRESH_INTERVAL = 30    # Auto-refresh interval (seconds)
+```
+
+### Common Configuration Changes
+
+**Change serial port:**
+```python
+SERIAL_PORT = "/dev/ttyUSB1"  # or "/dev/ttyAMA0" for Raspberry Pi GPIO
+```
+
+**Change API port:**
+```python
+API_PORT = 8080
+```
+
+**Use different database location:**
+```python
+DATABASE_FILE = "/var/lib/lora/messages.db"
+```
 
 ## Running the Application
 
@@ -58,22 +81,51 @@ To change these settings, edit the respective files:
    source .venv/bin/activate
    ```
 
-2. **Run the main application**:
+2. **Configure your settings** (if needed):
+   ```bash
+   # Edit config.py to match your setup
+   nano config.py
+   ```
+
+3. **Run the main application**:
    ```bash
    python main.py
    ```
 
 The application will:
 - Initialize the SQLite database
-- Start the Flask API server on port 5000
+- Start the Flask API server (default: http://0.0.0.0:5000)
+- Start the web dashboard at http://localhost:5000
 - Begin listening for LoRa messages on the configured serial port
 
-3. **Stop the application**:
+4. **Stop the application**:
    - Press `Ctrl+C` to gracefully shut down
+
+## Web Dashboard
+
+Access the live message monitoring dashboard by visiting `http://localhost:5000` in your web browser.
+
+Features:
+- Real-time message display
+- Auto-refresh every 30 seconds (configurable in `config.py`)
+- Message count and timestamp statistics
+- Direct link to API documentation
 
 ## API Endpoints
 
 Once running, the following endpoints are available:
+
+### Web Dashboard
+```bash
+GET http://localhost:5000/
+```
+Interactive web interface for monitoring messages.
+
+### API Documentation
+```bash
+GET http://localhost:5000/api
+```
+Lists all available API endpoints.
 
 ### Get Last 100 Messages
 ```bash
@@ -115,9 +167,12 @@ GET http://localhost:5000/api/health
 ```
 lora_listener/
 ├── main.py          # Main application entry point
+├── config.py        # Centralized configuration file
 ├── lora.py          # LoRa serial communication module
 ├── database.py      # SQLite database operations
 ├── api.py           # Flask REST API server
+├── templates/       # HTML templates
+│   └── index.html   # Web dashboard
 ├── requirements.txt # Python dependencies
 ├── messages.db      # SQLite database (created automatically)
 └── README.md        # This file

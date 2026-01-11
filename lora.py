@@ -1,12 +1,10 @@
 import serial
-
-PORT = "/dev/ttyUSB0"
-BAUD = 9600
+from config import SERIAL_PORT, SERIAL_BAUDRATE
 
 class LoRaReader:
     """Handles LoRa serial communication and message parsing."""
     
-    def __init__(self, port=PORT, baudrate=BAUD):
+    def __init__(self, port=SERIAL_PORT, baudrate=SERIAL_BAUDRATE):
         """Initialize serial connection."""
         self.ser = serial.Serial(
             port=port,

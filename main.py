@@ -1,5 +1,6 @@
 import sys
 from datetime import datetime
+from config import DATABASE_FILE, API_HOST, API_PORT
 from database import Database
 from lora import LoRaReader
 from api import API
@@ -9,11 +10,11 @@ def write_line(f, s: str):
     f.flush()
 
 # Initialize the database
-db = Database()
+db = Database(DATABASE_FILE)
 
 # Start the Flask API server with database reference
 api = API(db)
-api.start()
+api.start(API_HOST, API_PORT)
 
 # Initialize LoRa reader
 lora = LoRaReader()
