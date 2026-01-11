@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoRa Listener - Message Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .stat-box {
+            text-align: center;
+        }
+        
+        .stat-box .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-box .label {
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .messages {
+            padding: 20px;
+        }
+        
+        .message-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            transition: transform 0.2s;
+        }
+        
+        .message-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        
+        .message-id {
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .message-content {
+            font-size: 1.1em;
+            color: #212529;
+            word-wrap: break-word;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-size: 1.2em;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .refresh-indicator {
+            text-align: center;
+            padding: 10px;
+            font-size: 0.9em;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .api-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+        
+        .api-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📡 LoRa Listener</h1>
+            <div class="subtitle">SX1262 LoRa HAT Message Monitor</div>
+            <a href="/api" class="api-link" target="_blank">🔗 View API Documentation</a>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="value" id="message-count">-</div>
+                <div class="label">Total Messages</div>
+            </div>
+            <div class="stat-box">
+                <div class="value" id="last-updated">-</div>
+                <div class="label">Last Updated</div>
+            </div>
+        </div>
+        
+        <div class="messages" id="messages-container">
+            <div class="loading">Loading messages...</div>
+        </div>
+        
+        <div class="refresh-indicator">
+            Auto-refreshing every 30 seconds | Next refresh in <span id="countdown">30</span>s
+        </div>
+    </div>
+
+    <script>
+        let countdown = 30;
+        let countdownInterval;
+
+        async function fetchMessages() {
+            try {
+                const response = await fetch('/api/messages');
+                const data = await response.json();
+                
+                displayMessages(data);
+                updateStats(data);
+                resetCountdown();
+            } catch (error) {
+                displayError(error);
+            }
+        }
+
+        function displayMessages(data) {
+            const container = document.getElementById('messages-container');
+            
+            if (data.messages.length === 0) {
+                container.innerHTML = '<div class="loading">No messages received yet.</div>';
+                return;
+            }
+            
+            container.innerHTML = data.messages.map(msg => `
+                <div class="message-card">
+                    <div class="message-header">
+                        <span class="message-id">#${msg.id}</span>
+                        <span class="message-time">${formatTimestamp(msg.timestamp)}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(msg.message)}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats(data) {
+            document.getElementById('message-count').textContent = data.count;
+            document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+        }
+
+        function displayError(error) {
+            const container = document.getElementById('messages-container');
+            container.innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> Unable to fetch messages. ${error.message}
+                </div>
+            `;
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function resetCountdown() {
+            countdown = 30;
+            updateCountdown();
+        }
+
+        function updateCountdown() {
+            document.getElementById('countdown').textContent = countdown;
+        }
+
+        function startCountdown() {
+            countdownInterval = setInterval(() => {
+                countdown--;
+                updateCountdown();
+                
+                if (countdown <= 0) {
+                    countdown = 30;
+                }
+            }, 1000);
+        }
+
+        // Initial fetch
+        fetchMessages();
+        
+        // Start countdown
+        startCountdown();
+        
+        // Refresh every 30 seconds
+        setInterval(fetchMessages, 30000);
+    </script>
+</body>
+</html>
